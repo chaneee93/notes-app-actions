@@ -1,0 +1,67 @@
+name: CI Pipeline
+
+# ── 언제 실행할지 (이벤트) ──
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # ── 빌드 ──
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 소스코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 빌드 실행
+        run: |
+          echo "🔨 빌드 시작..."
+          cp src/app.sh app
+          chmod +x app
+          echo "빌드 완료!"
+
+      - name: 산출물 업로드
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-binary
+          path: app
+          retention-days: 7
+
+  # ── 테스트 ──
+  test:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 소스코드 가져오기
+        uses: actions/checkout@v4
+
+      - name: 산출물 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: app-binary
+
+      - name: 테스트 실행
+        run: |
+          echo "🧪 테스트 시작..."
+          ls -la app
+          sh tests/test.sh
+          echo "테스트 완료!"
+
+  # ── 패키지 ──
+  package:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 산출물 다운로드
+        uses: actions/download-artifact@v4
+        with:
+          name: app-binary
+
+      - name: 패키지 실행
+        run: |
+          echo "📦 패키지 시작..."
+          chmod +x app
+          sh app
+          echo "패키지 완료!"
